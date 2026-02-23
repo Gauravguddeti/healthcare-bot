@@ -1,7 +1,7 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/index.py", "use": "@vercel/python" },
+    { "src": "api/index.py", "use": "@vercel/python", "config": { "maxDuration": 60 } },
     { "src": "frontend/**", "use": "@vercel/static" }
   ],
   "routes": [
@@ -15,10 +15,5 @@
     { "src": "/",                 "dest": "frontend/index.html" },
     { "src": "/(.+\\.(js|css|png|jpg|jpeg|svg|ico|webp|woff2?))", "dest": "frontend/$1" },
     { "src": "/(.*)",             "dest": "frontend/index.html" }
-  ],
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60
-    }
-  }
+  ]
 }
