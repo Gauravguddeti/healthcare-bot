@@ -3,6 +3,9 @@
 const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   ? "http://localhost:8000"
   : window.location.origin;
+
+// Use streaming only on localhost; Vercel serverless doesn't support SSE reliably
+const IS_PRODUCTION = !(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 const SESSION_ID = crypto.randomUUID();
 const CHAT_STORAGE_KEY = "medassist_chat_history";
 
@@ -110,50 +113,78 @@ async function sendMessage() {
     const lang = langSelect.value;
 
     try {
-        const resp = await fetch(`${API_BASE}/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text, session_id: SESSION_ID, language: lang }),
-        });
-        if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
-        typingEl.remove();
+        if (IS_PRODUCTION) {
+            // ── Sync mode (Vercel) ──────────────────────────────────────
+            const resp = await fetch(`${API_BASE}/chat/sync`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: text, session_id: SESSION_ID, language: lang }),
+            });
+            if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
+            typingEl.remove();
 
-        const { bubbleEl, sourcesContainer, followupContainer, translatedContainer } = appendBotMessageContainer();
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let fullResponse = "";
-        let sources = [];
+            const data = await resp.json();
+            const { bubbleEl, sourcesContainer, followupContainer, translatedContainer } = appendBotMessageContainer();
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            for (const line of chunk.split("\n")) {
-                if (!line.startsWith("data: ")) continue;
-                const jsonStr = line.slice(6).trim();
-                if (!jsonStr) continue;
-                try {
-                    const data = JSON.parse(jsonStr);
-                    if (data.type === "emergency") { showEmergencyAlert(data.content); }
-                    else if (data.type === "profile") { updateProfileBadge(data.profile); }
-                    else if (data.type === "token") {
-                        fullResponse += data.content;
-                        bubbleEl.innerHTML = renderMarkdown(fullResponse);
-                        addMedicalTooltips(bubbleEl);
-                        scrollToBottom();
-                    } else if (data.type === "translated") {
-                        renderTranslated(translatedContainer, data.content);
-                    } else if (data.type === "sources") { sources = data.sources || []; }
-                    else if (data.type === "done") {
-                        const { cleanText, followups } = extractFollowups(fullResponse);
-                        bubbleEl.innerHTML = renderMarkdown(cleanText);
-                        addMedicalTooltips(bubbleEl);
-                        if (sources.length > 0) renderSources(sourcesContainer, sources);
-                        if (followups.length > 0) renderFollowups(followupContainer, followups);
-                        chatMessages.push({ role: "bot", text: cleanText, time: new Date().toLocaleTimeString() });
-                        saveChatMessage("bot", cleanText);
-                    } else if (data.type === "error") { bubbleEl.innerHTML = `<em>Error: ${data.content}</em>`; }
-                } catch (e) { }
+            if (data.emergency) showEmergencyAlert(data.emergency);
+            if (data.profile) updateProfileBadge(data.profile);
+
+            const { cleanText, followups } = extractFollowups(data.response || "");
+            bubbleEl.innerHTML = renderMarkdown(cleanText);
+            addMedicalTooltips(bubbleEl);
+            if (data.sources && data.sources.length > 0) renderSources(sourcesContainer, data.sources);
+            if (followups.length > 0) renderFollowups(followupContainer, followups);
+            chatMessages.push({ role: "bot", text: cleanText, time: new Date().toLocaleTimeString() });
+            saveChatMessage("bot", cleanText);
+            scrollToBottom();
+
+        } else {
+            // ── Streaming mode (localhost) ──────────────────────────────
+            const resp = await fetch(`${API_BASE}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: text, session_id: SESSION_ID, language: lang }),
+            });
+            if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
+            typingEl.remove();
+
+            const { bubbleEl, sourcesContainer, followupContainer, translatedContainer } = appendBotMessageContainer();
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = "";
+            let sources = [];
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                for (const line of chunk.split("\n")) {
+                    if (!line.startsWith("data: ")) continue;
+                    const jsonStr = line.slice(6).trim();
+                    if (!jsonStr) continue;
+                    try {
+                        const data = JSON.parse(jsonStr);
+                        if (data.type === "emergency") { showEmergencyAlert(data.content); }
+                        else if (data.type === "profile") { updateProfileBadge(data.profile); }
+                        else if (data.type === "token") {
+                            fullResponse += data.content;
+                            bubbleEl.innerHTML = renderMarkdown(fullResponse);
+                            addMedicalTooltips(bubbleEl);
+                            scrollToBottom();
+                        } else if (data.type === "translated") {
+                            renderTranslated(translatedContainer, data.content);
+                        } else if (data.type === "sources") { sources = data.sources || []; }
+                        else if (data.type === "done") {
+                            const { cleanText, followups } = extractFollowups(fullResponse);
+                            bubbleEl.innerHTML = renderMarkdown(cleanText);
+                            addMedicalTooltips(bubbleEl);
+                            if (sources.length > 0) renderSources(sourcesContainer, sources);
+                            if (followups.length > 0) renderFollowups(followupContainer, followups);
+                            chatMessages.push({ role: "bot", text: cleanText, time: new Date().toLocaleTimeString() });
+                            saveChatMessage("bot", cleanText);
+                        } else if (data.type === "error") { bubbleEl.innerHTML = `<em>Error: ${data.content}</em>`; }
+                    } catch (e) { }
+                }
             }
         }
     } catch (err) {
