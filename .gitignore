@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.env
+.env.local
+
+# Database — knowledge.db IS committed (needed for Vercel deployment).
+# If you regenerate it locally with the scraper, re-add and commit it.
+# knowledge.db  ← intentionally not excluded
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test files
+test_*.py
+
+# Vercel output
+.vercel/
