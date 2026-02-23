@@ -52,9 +52,15 @@ CORRECT example: "What are the warning signs I should watch for?"
 You MUST use square brackets. Format EXACTLY like this:
 [FOLLOWUP: question one | question two | question three]"""
 
-if not GROQ_API_KEY:
-    raise RuntimeError("GROQ_API_KEY environment variable is not set.")
-client = Groq(api_key=GROQ_API_KEY)
+_client: Groq | None = None
+
+def get_client() -> Groq:
+    global _client
+    if _client is None:
+        if not GROQ_API_KEY:
+            raise RuntimeError("GROQ_API_KEY environment variable is not set.")
+        _client = Groq(api_key=GROQ_API_KEY)
+    return _client
 
 
 def build_messages(user_query: str, context_chunks: list[dict],
@@ -118,7 +124,7 @@ def get_streaming_response(user_query, context_chunks, chat_history=None,
         drug_results=drug_results, doc_context=doc_context,
         user_profile=user_profile, lab_context=lab_context,
     )
-    stream = client.chat.completions.create(
+    stream = get_client().chat.completions.create(
         model=MODEL, messages=messages,
         temperature=0.3, max_tokens=1024, stream=True,
     )
@@ -133,7 +139,7 @@ def get_response(user_query, context_chunks, chat_history=None,
         drug_results=drug_results, doc_context=doc_context,
         user_profile=user_profile, lab_context=lab_context,
     )
-    response = client.chat.completions.create(
+    response = get_client().chat.completions.create(
         model=MODEL, messages=messages,
         temperature=0.3, max_tokens=1024, stream=False,
     )
