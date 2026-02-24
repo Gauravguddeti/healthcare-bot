@@ -122,19 +122,42 @@ def format_profile(session_id: str) -> str:
 
 # ─── Emergency Detection ───────────────────────────────────────────
 EMERGENCY_PATTERNS_RE = [re.compile(p, re.IGNORECASE) for p in [
+    # Physical emergencies
     r"\bchest\s*pain\b", r"\bheart\s*attack\b", r"\bstroke\b",
     r"\bcan'?t\s*breathe\b", r"\bdifficulty\s*breathing\b",
     r"\bsevere\s*bleeding\b", r"\bunconscious\b", r"\bseizure\b",
-    r"\bsuicid", r"\bkill\s*myself\b", r"\bwant\s*to\s*die\b",
     r"\boverdose\b", r"\bpoisoning\b", r"\banaphyla",
     r"\bchoking\b", r"\bsevere\s*allergic\b",
+    # Suicidal / self-harm — English
+    r"\bsuicid", r"\bkill\s*myself\b", r"\bwant\s*to\s*die\b",
+    r"\bend\s*(it|my\s*life|everything)\b", r"\bdone\s*with\s*(life|everything|it\s*all)\b",
+    r"\bit'?s\s*done\s*for\s*me\b", r"\bno\s*reason\s*to\s*live\b",
+    r"\bself\s*harm\b", r"\bcut\s*my\s*self\b", r"\bhurt\s*myself\b",
+    r"\bnot\s*worth\s*living\b", r"\bwant\s*to\s*disappear\b",
+    # Suicidal / self-harm — Hinglish
+    r"\bmujhe\s*jeena\s*nahi\b", r"\bnahi\s*rahna\b", r"\bjaan\s*de\s*du\b",
+    r"\bmarna\s*chahta\b", r"\bmarna\s*chahti\b", r"\bkhatam\s*kar\s*(lu|lena|du)\b",
+    r"\bzindagi\s*nahi\s*chahiye\b", r"\bjeene\s*ka\s*mann\s*nahi\b",
+    # Suicidal / self-harm — Marathinglish
+    r"\bmala\s*jagaycha\s*nahi\b", r"\bmala\s*maraycha\s*aahe\b",
+    r"\bsampavun\s*(takto|takte)\b", r"\bjag\s*nako\s*watata\b",
+    r"\bnahi\s*rahaycha\b",
 ]]
 
 EMERGENCY_MESSAGE = (
-    "🚨 **EMERGENCY DETECTED** — If you or someone else is experiencing a medical emergency, "
-    "please call emergency services immediately:\n\n"
-    "- **India**: 112 / 108 (Ambulance)\n- **US**: 911\n- **EU**: 112\n\n"
-    "Do NOT wait for an AI response. Seek help NOW."
+    "🚨 **Please reach out for help right now.**\n\n"
+    "If you're having thoughts of hurting yourself or feeling like you can't go on, "
+    "you don't have to face this alone. There are people who care and want to help.\n\n"
+    "**India crisis helplines:**\n"
+    "- iCall (TISS): **9152987821**\n"
+    "- Vandrevala Foundation: **1860-2662-345** (24/7, free)\n"
+    "- AASRA: **9820466627**\n"
+    "- Emergency / Ambulance: **112 / 108**\n\n"
+    "**International:**\n"
+    "- US: 988 Suicide & Crisis Lifeline\n"
+    "- UK: Samaritans 116 123\n\n"
+    "Use the 🏥 **Nearby Hospitals** button in the header to find emergency care close to you.\n\n"
+    "*You matter. Please talk to someone.*"
 )
 
 
